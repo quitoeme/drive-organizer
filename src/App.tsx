@@ -79,11 +79,10 @@ export default function App() {
   const [files, setFiles] = useState<any[]>([]);
   const [plans, setPlans] = useState<Record<string, any>>({});
   const [processing, setProcessing] = useState(false);
-  const [step, setStep] = useState<'setup' | 'selection' | 'preview' | 'done'>('setup');
+  const [step, setStep] = useState<'landing' | 'setup' | 'selection' | 'preview' | 'done'>('landing');
 
   useEffect(() => {
     if (accessToken) {
-      // Fetch user info simple way
       fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${accessToken}` }
       })
@@ -94,15 +93,13 @@ export default function App() {
   }, [accessToken]);
 
   useEffect(() => {
-    // If API Key is pre-configured in environment, skip setup
-    if (import.meta.env.VITE_GEMINI_API_KEY && clientId) {
+    if (import.meta.env.VITE_GEMINI_API_KEY && clientId && step === 'setup') {
       setStep('selection');
     }
-  }, [clientId]);
+  }, [clientId, step]);
 
   const handleGoogleLogin = () => {
     if (!clientId) return alert("Please enter Google Client ID");
-    
     // @ts-ignore
     const client = google.accounts.oauth2.initTokenClient({
       client_id: clientId,
@@ -124,8 +121,6 @@ export default function App() {
       const driveFiles = await listFiles(folderId, accessToken!);
       setFiles(driveFiles);
       setStep('preview');
-      
-      // Gradually analyze with Gemini
       for (const file of driveFiles) {
         const plan = await getOrganizationPlan(file, apiKey);
         setPlans(prev => ({ ...prev, [file.id]: plan }));
@@ -143,7 +138,6 @@ export default function App() {
       for (const file of files) {
         const plan = plans[file.id];
         if (!plan) continue;
-
         const targetFolderId = await createFolderIfNotExist(plan.targetFolder, folderId, accessToken!);
         await renameAndMoveFile(file.id, plan.suggestedName, targetFolderId, accessToken!, folderId);
         setFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'done' } : f));
@@ -163,12 +157,59 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen text-white flex flex-col">
-      <Navbar user={user} onLogout={() => setAccessToken(null)} />
+    <div className="min-h-screen text-white flex flex-col font-sans">
+      <Navbar user={user} onLogout={() => { setAccessToken(null); setStep('landing'); }} />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-8 py-12">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-8 py-12">
         <AnimatePresence mode="wait">
           
+          {step === 'landing' && (
+            <motion.div 
+              key="landing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="text-center mt-12"
+            >
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full mb-8">
+                <Sparkles className="w-4 h-4 text-blue-400" />
+                <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Powered by Gemini 3.5 Flash</span>
+              </div>
+              
+              <h1 className="text-6xl md:text-8xl font-bold mb-8 leading-tight">
+                Organize your Drive <br />
+                <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent italic">with Intelligence</span>
+              </h1>
+              
+              <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+                Connect your Google Drive and let our agent rename, categorize, and nomenclature your media files automatically using state-of-the-art AI.
+              </p>
+
+              <div className="flex justify-center gap-6 mb-24">
+                <button 
+                  onClick={() => setStep(clientId && (apiKey || import.meta.env.VITE_GEMINI_API_KEY) ? 'selection' : 'setup')}
+                  className="btn-primary px-10 py-5 text-lg shadow-[0_0_40px_rgba(59,130,246,0.3)]"
+                >
+                  Get Started Now
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {[
+                  { icon: <Sparkles />, title: "AI Naming", desc: "Professional nomenclature for every file." },
+                  { icon: <CheckCircle2 />, title: "Auto-Sorting", desc: "Intelligent folder categorization." },
+                  { icon: <Settings />, title: "Custom Rules", desc: "Configurable patterns for your organization." }
+                ].map((feat, i) => (
+                  <div key={i} className="glass p-8 text-left border-white/5 bg-white/[0.02]">
+                    <div className="text-blue-500 mb-4">{feat.icon}</div>
+                    <h3 className="text-xl font-bold mb-2">{feat.title}</h3>
+                    <p className="text-gray-500 text-sm">{feat.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {step === 'setup' && (
             <motion.div 
               key="setup"
@@ -181,29 +222,14 @@ export default function App() {
                 <Settings className="text-blue-500 w-10 h-10" />
               </div>
               <h2 className="text-4xl font-bold mb-4">Initial Configuration</h2>
-              <p className="text-gray-400 mb-10 max-w-md mx-auto">Set up your API keys to start organizing with intelligence. This is only needed once.</p>
-              
               <div className="flex flex-col gap-6 items-start text-left max-w-md mx-auto">
                 <div className="w-full">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Gemini API Key</label>
-                  <input 
-                    type="password" 
-                    value={apiKey} 
-                    onChange={e => setApiKey(e.target.value)}
-                    className="input-field w-full"
-                    placeholder="Enter key..."
-                  />
+                  <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="input-field w-full" placeholder="Enter key..." />
                 </div>
                 <div className="w-full">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Google Client ID</label>
-                  <input 
-                    type="text" 
-                    value={clientId} 
-                    onChange={e => setClientId(e.target.value)}
-                    className="input-field w-full"
-                    placeholder="xxxx-xxxx.apps.googleusercontent.com"
-                  />
-                  <p className="text-[10px] text-gray-600 mt-2">Get this from Google Cloud Console</p>
+                  <input type="text" value={clientId} onChange={e => setClientId(e.target.value)} className="input-field w-full" placeholder="xxxx-xxxx.apps.googleusercontent.com" />
                 </div>
                 <button onClick={saveSettings} className="btn-primary w-full mt-4 py-4 flex items-center justify-center gap-2">
                   Continue <ArrowRight className="w-5 h-5" />
@@ -225,7 +251,6 @@ export default function App() {
                     <FolderOpen className="text-blue-500 w-10 h-10" />
                   </div>
                   <h2 className="text-4xl font-bold mb-4">Connect your Drive</h2>
-                  <p className="text-gray-400 mb-10">Select the account where you want to organize your files.</p>
                   <button onClick={handleGoogleLogin} className="btn-primary flex items-center gap-3 mx-auto px-10 py-5">
                     Login with Google
                   </button>
@@ -236,22 +261,9 @@ export default function App() {
                     <FolderSearch className="text-blue-500 w-10 h-10" />
                   </div>
                   <h2 className="text-4xl font-bold mb-4">Select Source Folder</h2>
-                  <p className="text-gray-400 mb-10">Paste the Folder ID you want to organize.</p>
                   <div className="flex gap-4 max-w-md mx-auto">
-                    <input 
-                      type="text" 
-                      value={folderId} 
-                      onChange={e => setFolderId(e.target.value)}
-                      className="input-field flex-1"
-                      placeholder="Folder ID..."
-                    />
-                    <button 
-                      onClick={handleScan}
-                      disabled={processing}
-                      className="btn-primary"
-                    >
-                      {processing ? 'Scanning...' : 'Scan Folder'}
-                    </button>
+                    <input type="text" value={folderId} onChange={e => setFolderId(e.target.value)} className="input-field flex-1" placeholder="Folder ID..." />
+                    <button onClick={handleScan} disabled={processing} className="btn-primary">{processing ? 'Scanning...' : 'Scan Folder'}</button>
                   </div>
                 </>
               )}
@@ -259,54 +271,28 @@ export default function App() {
           )}
 
           {step === 'preview' && (
-            <motion.div 
-              key="preview"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-6"
-            >
+            <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h2 className="text-3xl font-bold">Optimization Plan</h2>
-                  <p className="text-gray-400">Gemini suggests the following changes.</p>
-                </div>
-                <button 
-                  onClick={handleOrganize}
-                  disabled={processing}
-                  className="btn-primary px-8 py-4 flex items-center gap-2"
-                >
+                <div><h2 className="text-3xl font-bold">Optimization Plan</h2></div>
+                <button onClick={handleOrganize} disabled={processing} className="btn-primary px-8 py-4 flex items-center gap-2">
                   Confirm & Organize <Sparkles className="w-5 h-5" />
                 </button>
               </div>
-
               <div className="space-y-4">
                 {files.map(file => (
-                  <FileItem 
-                    key={file.id} 
-                    file={file} 
-                    plan={plans[file.id]} 
-                    status={file.status} 
-                  />
+                  <FileItem key={file.id} file={file} plan={plans[file.id]} status={file.status} />
                 ))}
               </div>
             </motion.div>
           )}
 
           {step === 'done' && (
-            <motion.div 
-              key="done"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="glass p-16 text-center"
-            >
+            <motion.div key="done" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass p-16 text-center">
               <div className="bg-green-500/20 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8">
                 <CheckCircle2 className="text-green-500 w-12 h-12" />
               </div>
               <h2 className="text-4xl font-bold mb-4">Mission Accomplished!</h2>
-              <p className="text-gray-400 mb-10">Your folder is now perfectly organized and nomenclature-compliant.</p>
-              <button onClick={() => setStep('selection')} className="btn-primary px-10">
-                Organize another folder
-              </button>
+              <button onClick={() => setStep('selection')} className="btn-primary px-10">Organize another folder</button>
             </motion.div>
           )}
 
@@ -314,7 +300,7 @@ export default function App() {
       </main>
 
       <footer className="py-8 text-center text-gray-600 text-xs tracking-widest uppercase font-bold">
-        Built with Gemini AI & Antigravity
+        Built with Gemini 3.5 Flash & Antigravity
       </footer>
     </div>
   );
