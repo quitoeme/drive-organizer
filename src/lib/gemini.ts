@@ -6,7 +6,7 @@ export async function getOrganizationPlan(file: any, apiKey: string) {
   if (!activeApiKey) throw new Error("Missing Gemini API Key");
 
   const genAI = new GoogleGenerativeAI(activeApiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
 
   const prompt = `
     Analyze this file metadata:
