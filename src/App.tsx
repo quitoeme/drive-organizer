@@ -272,8 +272,21 @@ export default function App() {
 
           {step === 'preview' && (
             <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-              <div className="flex items-center justify-between mb-8">
-                <div><h2 className="text-3xl font-bold">Optimization Plan</h2></div>
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+                <div>
+                  <h2 className="text-3xl font-bold">Optimization Plan</h2>
+                  <div className="flex gap-4 mt-2">
+                    <div className="text-[10px] uppercase tracking-widest text-gray-500 font-bold bg-white/5 px-2 py-1 rounded">
+                      Tokens: {Object.values(plans).reduce((acc, p) => acc + (p.usage?.totalTokenCount || 0), 0)}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-widest text-blue-400 font-bold bg-blue-500/10 px-2 py-1 rounded">
+                      Est. Cost: ${ (
+                        (Object.values(plans).reduce((acc, p) => acc + (p.usage?.promptTokenCount || 0), 0) / 1000000 * 1.50) +
+                        (Object.values(plans).reduce((acc, p) => acc + (p.usage?.candidatesTokenCount || 0), 0) / 1000000 * 9.00)
+                      ).toFixed(4) }
+                    </div>
+                  </div>
+                </div>
                 <button onClick={handleOrganize} disabled={processing} className="btn-primary px-8 py-4 flex items-center gap-2">
                   Confirm & Organize <Sparkles className="w-5 h-5" />
                 </button>
@@ -292,7 +305,16 @@ export default function App() {
                 <CheckCircle2 className="text-green-500 w-12 h-12" />
               </div>
               <h2 className="text-4xl font-bold mb-4">Mission Accomplished!</h2>
-              <button onClick={() => setStep('selection')} className="btn-primary px-10">Organize another folder</button>
+              <div className="mb-8 text-gray-400">
+                <p>Process complete. Total investment in AI for this run:</p>
+                <p className="text-2xl font-mono text-white mt-2">
+                   ${ (
+                        (Object.values(plans).reduce((acc, p) => acc + (p.usage?.promptTokenCount || 0), 0) / 1000000 * 1.50) +
+                        (Object.values(plans).reduce((acc, p) => acc + (p.usage?.candidatesTokenCount || 0), 0) / 1000000 * 9.00)
+                      ).toFixed(6) }
+                </p>
+              </div>
+              <button onClick={() => { setStep('selection'); setFiles([]); setPlans({}); }} className="btn-primary px-10">Organize another folder</button>
             </motion.div>
           )}
 

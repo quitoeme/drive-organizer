@@ -32,12 +32,19 @@ export async function getOrganizationPlan(file: any, apiKey: string) {
   try {
     // Clean potential markdown code blocks
     const jsonStr = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(jsonStr);
-  } catch (e) {
-    console.error("Failed to parse Gemini response", text);
+    const plan = JSON.parse(jsonStr);
+    
+    // Return plan plus usage stats
+    return {
+      ...plan,
+      usage: response.usageMetadata
+    };
+  } catch (e: any) {
+    console.error("Failed to parse Gemini response", text, e);
     return {
       suggestedName: file.name,
-      targetFolder: "Unsorted"
+      targetFolder: "Unsorted",
+      usage: response.usageMetadata
     };
   }
 }
