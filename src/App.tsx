@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   FolderSearch, 
   Settings, 
@@ -8,8 +8,7 @@ import {
   FolderOpen, 
   Image as ImageIcon, 
   Video as VideoIcon,
-  LogOut,
-  AlertCircle
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listFiles, renameAndMoveFile, createFolderIfNotExist } from './lib/google-drive';
