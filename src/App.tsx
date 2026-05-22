@@ -72,13 +72,23 @@ const FileItem = ({ file, plan, status }: { file: any, plan: any, status: string
 export default function App() {
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('drive_token'));
   const [user, setUser] = useState<any>(null);
-  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-  const [clientId, setClientId] = useState(localStorage.getItem('google_client_id') || '');
+  
+  // Initialize with env vars if available
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || '');
+  const [clientId, setClientId] = useState(import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem('google_client_id') || '');
+  
   const [folderId, setFolderId] = useState('');
   const [files, setFiles] = useState<any[]>([]);
   const [plans, setPlans] = useState<Record<string, any>>({});
   const [processing, setProcessing] = useState(false);
-  const [step, setStep] = useState<'landing' | 'setup' | 'selection' | 'preview' | 'done'>('landing');
+
+  // Determine initial step
+  const getInitialStep = () => {
+    const hasCreds = (apiKey || import.meta.env.VITE_GEMINI_API_KEY) && (clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID);
+    return hasCreds ? 'selection' : 'landing';
+  };
+
+  const [step, setStep] = useState<'landing' | 'setup' | 'selection' | 'preview' | 'done'>(getInitialStep());
 
   useEffect(() => {
     if (accessToken) {
@@ -186,7 +196,10 @@ export default function App() {
 
               <div className="flex justify-center gap-6 mb-24">
                 <button 
-                  onClick={() => setStep(clientId && (apiKey || import.meta.env.VITE_GEMINI_API_KEY) ? 'selection' : 'setup')}
+                  onClick={() => {
+                    const hasCreds = (apiKey || import.meta.env.VITE_GEMINI_API_KEY) && (clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID);
+                    setStep(hasCreds ? 'selection' : 'setup');
+                  }}
                   className="btn-primary px-10 py-5 text-lg shadow-[0_0_40px_rgba(59,130,246,0.3)]"
                 >
                   Get Started Now
